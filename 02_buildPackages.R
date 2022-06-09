@@ -1,5 +1,5 @@
 ## build optimized biome packages of data
-## dhemerson.costa@ipam.org.br
+## dhemerson.costa@ipam.org.br | wallace.silva@ipam.org.br
 
 ## set csv directory
 root <- './table'
