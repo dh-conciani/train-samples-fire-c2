@@ -1,5 +1,5 @@
 ## build optimized biome packages of data
-## dhemerson.costa@ipam.org.br | wallace.silva@ipam.org.br
+## dhemerson.costa@ipam.org.br || wallace.silva@ipam.org.br
 
 ## set csv directory
 root <- './table'
@@ -25,9 +25,16 @@ for (i in 1:length(biomes)) {
     print(paste0('file ', j, ' of ', length(files_i)))
     ## read file
     file_ij <- read.csv(paste0(root, '/', files_i[j]), encoding= 'UTF-8')[-1][-2][-4][-13]
+    
+    ## compute indexes
+    file_ij$ndvi <- (file_ij$nir - file_ij$red) / (file_ij$nir + file_ij$red)
+    file_ij$baim <- 1 / ((0.05 - file_ij$nir)^2 + (0.2 - file_ij$swir1)^2)
+    file_ij$mirbi = 10 * file_ij$swir1 - 9.8 * file_ij$nir + 2
+    
     ## bind into recipe
     recipe <- rbind(recipe, file_ij)
   }
   ## export
   write.csv(recipe, paste0('./table_biomes/', 'samples_', biomes[i], '.csv'))
 }
+
