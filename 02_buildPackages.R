@@ -31,4 +31,3 @@ for (i in 1:length(biomes)) {
   ## export
   write.csv(recipe, paste0('./table_biomes/', 'samples_', biomes[i], '.csv'))
 }
-
