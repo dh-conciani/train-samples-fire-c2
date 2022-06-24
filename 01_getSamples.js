@@ -1,7 +1,7 @@
 /** @description coletando comportamento espectral das amostras de fogo e não fogo do Mapbiomas-Fogo
   Grupo de trabalho de mapeamento de fogo no Brasil - MapBiomas Fogo
   
-  2022-06-24 - Wallace Silva, Dhemerson Cociani, Soltan Galeno e Vera Laísa
+  2022-06-24 - Wallace Silva, Dhemerson Conciani, Soltan Galeno e Vera Laísa
  * 
 */ 
 //--- --- --- funçoes e variaveis auxiliares para o dataset
@@ -377,9 +377,9 @@ var samples = samples
             var description = 'assign_spectral_data-v1_20220623-'+ o.shortname+'-'+situation[i];
             print(sampleRegions);
             Export.table.toDrive({
-              collection:sampleregions,
+              collection:sampleRegions,
               description:description,
-              folder:'mapbiomas-fogo',
+              folder:'samples-fire',
               fileNamePrefix:description,
               fileFormat:'csv',
               // selectors:,
