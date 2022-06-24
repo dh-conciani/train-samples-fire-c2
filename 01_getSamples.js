@@ -1,8 +1,8 @@
 /** @description coletando comportamento espectral das amostras de fogo e não fogo do Mapbiomas-Fogo
   Grupo de trabalho de mapeamento de fogo no Brasil - MapBiomas Fogo
   
-  2022-06-23 - Wallace Silva, Dhemerson Cociani e Soltan Galeno
- *  
+  2022-06-24 - Wallace Silva, Dhemerson Cociani, Soltan Galeno e Vera Laísa
+ * 
 */ 
 //--- --- --- funçoes e variaveis auxiliares para o dataset
 var blockList_landsat = require('users/geomapeamentoipam/GT_Fogo_MapBiomas:00_Tools/module-blockList').landsat();
@@ -260,15 +260,6 @@ var samples = [
   
 ];
 
-var biomes = {
-  'amazonia':'Amazônia',
-  'caatinga':'Caatinga',
-  'cerrado':'Cerrado',
-  'mata':'Mata Atlântica',
-  'pampa':'Pampa',
-  'pantanal':'Pantanal'
-};
-
 var samples = samples
   // filtrando pasta com os arquivos
   .filter(function(obj){
@@ -283,141 +274,126 @@ var samples = samples
       .map(function(o){
         o.year = o.id.slice(-4);
         
+        var biomes = {
+          'amazonia':'Amazônia',
+          'caatinga':'Caatinga',
+          'cerrado':'Cerrado',
+          'mata':'Mata Atlântica',
+          'pampa':'Pampa',
+          'pantanal':'Pantanal',
+        };
+        
         return { // objeto com todas as variaveis de interesse contidas nos endereços dos assets de amostras
           'type':o.type,
           'id':o.id,
           'name':o.name.split('/')[7],
-          'shortname':o.name.split('/')[7].replace('train_test_fire_nbr_',''),
+          'shortname':o.name.split('/')[7].replace('train_test_fire_nbr',''),
+          'biome':biomes[o.name.split('/')[7].split('_')[4]],
           'path':o.name.split('/')[6],
           'year':o.id.slice(-4),
-          'sat':o.id.split('_l')[1].split('_')[0],
-          'biome':biomes[o.name.split('/')[7].split('_')[4]],
-          'region':o.name.split('/')[7].slice(-13,-15)
+          'sat':o.id.split('_l')[1].split('_')[0]
         };
       });
 
     return obj;})
     // 
   .forEach(function(obj){
-    obj.assets
-      .forEach(function(o){
-
-        // amostras
-        var featureCollection = ee.FeatureCollection(o.id);
-    
-        // estrutura para construir o mosaico de qualidade
-        var recipe = ee.ImageCollection([]);
-        satellites
-          .map(function(satellite){
-            // transformando os numeros inteiros em string
-            satellite.years_str = satellite.years.map(function(year){return ''+year});
-            return satellite;
-          })
-          .filter(function(satellite){
-            // filtro segundo a lista de anos nos objetos dos satelites
-            return satellite.years_str.indexOf(o.year) !== -1;
-          }) 
-          .forEach(function(satellite){
-            // filtro de data 
-            var start = ''+o.year+'-01-01';
-            var end = '' + (o.year+1) + '-01-01';
-            // construindo a coleção de imagens ja com todos os processamentos necessarios
-            var collection = satellite.allProcess(satellite.id)
-              .filterBounds(featureCollection) // filtro espacial
-              .filterDate(start,end); // filtro temporal
-            
-            recipe = recipe.merge(collection); // unindo a coleção do ano com os demais anos no recipe
-            // var mosaic = satellite.reduceProcess(collection);
-            // print(collection,start,end);
-            // Map.addLayer(mosaic);
-          });
-          
-          // contruindo mosaico de qualidade
-          var mosaic = recipe.qualityMosaic('nbr');
-          
-          // selecionando uso e cobertura do ano
-          var landcover = ee.Image('projects/mapbiomas-workspace/public/collection6/mapbiomas_collection60_integration_v1')
-            .select(['classification_'+o.year],['lulc_col6']);
-          
-          // concluindo mosaico para extração dos dados
-          mosaic = mosaic.addBands(landcover);
-
-          var cenas = ee.FeatureCollection('projects/mapbiomas-workspace/AUXILIAR/cenas-landsat') // cenas landsat
-            .filterBounds(featureCollection);  // filtrando as cenas que cruzam com amostras
-          
-          // construindo lista de cenas que cruzam a amostra
-          cenas.aggregate_array('TILE_T').distinct().evaluate(function(list){
-            // print(list)
-            // loop em função da lista de strings com os nomes das cenas
-            list.forEach(function(prop){
-              var cena = cenas.filter(ee.Filter.eq('TILE_T',prop)).geometry();
-              // Map.addLayer(cena,{},prop,false);
-              
-              [0,1].forEach(function(i){
-                
-              var fc = featureCollection
-                .filter(ee.Filter.eq('fire',i))
-                .geometry()
-                .geometries();
-                
-                var situation = {
-                  0:'naofogo',
-                  1:'fogo'
-                };
-                
-                fc = fc.map(function(g){return ee.Feature(ee.Geometry(g))
-                .set(o)
-                .set({
-                  'fogo_int':i,
-                  'fogo':situation[i],
-                  'cena':prop,
-                  });
-                });
-                
-                fc = ee.FeatureCollection(fc)
-                .filterBounds(cena);
-                
-                fc.size().evaluate(function(size){
-                    if(size === 0){return} // desviando features vazias
-
-                    var sampleRegions = mosaic.sampleRegions({
-                      collection:fc,
-                      // properties:{},
-                      scale:30, 
-                      // projection:,
-                      tileScale:16,
-                      geometries:false
-                    });  
-              
-                    o.sampleRegions = sampleRegions;
-                    // .limit(10);
-                    // print(o.sampleRegions);
-                    // Map.addLayer(fc);
-                    
-                    var description = 'assign_spectral_data-v1_20220623-' + situation[i] + '-' +prop + '-' + o.name.replace('train_test_fire_nbr_','');
-                    // print('o.sampleRegions',o.sampleRegions);
-                    
+    obj.assets = obj.assets
+    .forEach(function(o){
+      // amostras
+      var featureCollection = ee.FeatureCollection(o.id);
+  
+      // estrutura para construir o mosaico de qualidade e amostragem
+      var recipe = ee.ImageCollection([]);
       
-                    Export.table.toDrive({
-                      collection:o.sampleRegions,
-                      description:description,
-                      folder:'mapbiomas-fogo',
-                      fileNamePrefix:description,
-                      fileFormat:'csv',
-                      // selectors:,
-                      // maxVertices:
-                    });
-                    
-                  });
-            });
-          });
+      // construindo coleção de imagens de satelite
+      satellites
+        .map(function(satellite){
+          // transformando os numeros inteiros em string
+          satellite.years_str = satellite.years.map(function(year){return ''+year});
+          return satellite;
+        })
+        .filter(function(satellite){
+          // filtro segundo a lista de anos nos objetos dos satelites
+          return satellite.years_str.indexOf(o.year) !== -1;
+        }) 
+        .forEach(function(satellite){
+          // filtro de data 
+          var start = ''+o.year+'-01-01';
+          var end = '' + (o.year+1) + '-01-01';
+          // construindo a coleção de imagens ja com todos os processamentos necessarios
+          var collection = satellite.allProcess(satellite.id)
+            .filterBounds(featureCollection) // filtro espacial
+            .filterDate(start,end); // filtro temporal
+          
+          recipe = recipe.merge(collection); // unindo a coleção do ano com os demais anos no recipe
+          // var mosaic = satellite.reduceProcess(collection);
+          // print(collection,start,end);
+          // Map.addLayer(mosaic);
         });
+        
+        // contruindo mosaico de qualidade
+        var mosaic = recipe.qualityMosaic('nbr');
+        
+        // selecionando uso e cobertura do ano
+        var landcover = ee.Image('projects/mapbiomas-workspace/public/collection6/mapbiomas_collection60_integration_v1')
+          .select(['classification_'+o.year],['lulc_col6']);
+        
+        // concluindo mosaico para extração dos dados
+        mosaic = mosaic.addBands(landcover);
+        
+        var sampleregions = ee.FeatureCollection([]);
+        [0,1].forEach(function(i){
+          var fc = featureCollection
+            .filter(ee.Filter.eq('fire',i))
+            .geometry()
+            .geometries();
+            
+          var situation = {
+            0:'naoFogo',
+            1:'fogo'
+          };
 
-      });
-    
-    // obj.years = obj.assets.map(function(o){return o.year})
-    //   .sort();
-    // obj.years = obj.years.filter(function(este,i){return obj.years.indexOf(este) === i;});
-    
-    // return obj;
-  });
+          fc = fc.map(function(g){return ee.Feature(ee.Geometry(g))
+            .set(o)
+            .set({
+              fire_int:i,
+              fire_str:situation[i]
+            });
+            
+          });
+          
+          fc = ee.FeatureCollection(fc);
+      
+          var sampleRegions = mosaic.sampleRegions({
+                collection:fc,
+                // properties:{},
+                scale:30, 
+                // projection:,
+                // tileScale:,
+                geometries:false
+          });
+
+            var description = 'assign_spectral_data-v1_20220623-'+ o.shortname+'-'+situation[i];
+            print(sampleRegions);
+            Export.table.toDrive({
+              collection:sampleregions,
+              description:description,
+              folder:'mapbiomas-fogo',
+              fileNamePrefix:description,
+              fileFormat:'csv',
+              // selectors:,
+              // maxVertices:
+            });
+
+
+          // sampleregions = sampleregions.merge(ee.FeatureCollection(sampleRegions));
+        });
+    });
+
+});
+  // obj.years = obj.assets.map(function(o){return o.year})
+  //   .sort();
+  // obj.years = obj.years.filter(function(este,i){return obj.years.indexOf(este) === i;});
+
+ 
