@@ -12,7 +12,6 @@ files <- list.files(root)
 basenames <- gsub('-', '_', files)
 ### get biome names
 biomes <- unique(sapply(strsplit(basenames, split='_', fixed=TRUE), function(x) (x[7])))[1:6]
-biomes <- biomes[2:6]
 
 ## for each biome
 for (i in 1:length(biomes)) {
