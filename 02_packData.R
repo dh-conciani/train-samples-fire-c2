@@ -12,6 +12,7 @@ files <- list.files(root)
 basenames <- gsub('-', '_', files)
 ### get biome names
 biomes <- unique(sapply(strsplit(basenames, split='_', fixed=TRUE), function(x) (x[7])))[1:6]
+biomes <- biomes[2:6]
 
 ## for each biome
 for (i in 1:length(biomes)) {
@@ -38,6 +39,8 @@ for (i in 1:length(biomes)) {
                                                        "type",
                                                        ".geo"))]
     
+    ## skip if colums dont contains spectral signatures
+    if (sum(colnames(file_ij) == 'nir') == 0) next
     ## standardize names
     colnames(file_ij) <- gsub('fogo', 'fire', colnames(file_ij))
     
@@ -49,6 +52,7 @@ for (i in 1:length(biomes)) {
     ## bind into recipe
     recipe <- rbind(recipe, file_ij)
   }
+  
   ## export
   write.csv(recipe, paste0('./table_biomes/', 'samples_', biomes[i], '.csv'))
 }
