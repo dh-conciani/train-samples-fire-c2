@@ -58,6 +58,12 @@ for (i in 1:length(biomes)) {
     recipe <- rbind(recipe, file_ij)
   }
   
+  ## check duplicated rows
+  print(paste0('removed ', length(which(duplicated(recipe))), ' duplicated rows'))
+  
+  ## remove duplicated rows
+  recipe <- recipe[ -which(duplicated(recipe)) ,]
+  
   ## export
   write.csv(recipe, paste0('./table_biomes/', 'samples_', biomes[i], '.csv'))
 }
