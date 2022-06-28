@@ -2,7 +2,7 @@
 ## dhemerson.costa@ipam.org.br || wallace.silva@ipam.org.br
 
 ## set csv directory
-root <- './table'
+root  <- './table' #
 
 ## get filenames
 files <- list.files(root)
@@ -11,7 +11,7 @@ files <- list.files(root)
 ### change "-" by "_"
 basenames <- gsub('-', '_', files)
 ### get biome names
-biomes <- unique(sapply(strsplit(basenames, split='_', fixed=TRUE), function(x) (x[6])))
+biomes <- unique(sapply(strsplit(basenames, split='_', fixed=TRUE), function(x) (x[7])))[1:6]
 
 ## for each biome
 for (i in 1:length(biomes)) {
@@ -24,7 +24,22 @@ for (i in 1:length(biomes)) {
   for (j in 1:length(files_i)) {
     print(paste0('file ', j, ' of ', length(files_i)))
     ## read file
-    file_ij <- read.csv(paste0(root, '/', files_i[j]), encoding= 'UTF-8')[-1][-2][-4][-13]
+    file_ij <- read.csv(paste0(root, '/', files_i[j]), encoding= 'UTF-8')
+    
+    ## remove unnecessary columns
+    file_ij <- file_ij[ , -which(names(file_ij) %in% c("system.index",
+                                                       "cena",
+                                                       "region",
+                                                       "fogo",
+                                                       "fire_str",
+                                                       "id",
+                                                       "path",
+                                                       "name",
+                                                       "type",
+                                                       ".geo"))]
+    
+    ## standardize names
+    colnames(file_ij) <- gsub('fogo', 'fire', colnames(file_ij))
     
     ## compute indexes
     file_ij$ndvi <- (file_ij$nir - file_ij$red) / (file_ij$nir + file_ij$red)
@@ -37,4 +52,3 @@ for (i in 1:length(biomes)) {
   ## export
   write.csv(recipe, paste0('./table_biomes/', 'samples_', biomes[i], '.csv'))
 }
-
