@@ -44,6 +44,12 @@ for (i in 1:length(biomes)) {
     ## standardize names
     colnames(file_ij) <- gsub('fogo', 'fire', colnames(file_ij))
     
+    ## use regex to remove underscore when it is the first character in shortname string
+    file_ij$shortname <- gsub("^\\_","",file_ij$shortname)
+    
+    ## parse region name from string 
+    file_ij$region <- sapply(strsplit(file_ij$shortname, split='_', fixed=TRUE), function(x) (x[2]))
+    
     ## compute indexes
     file_ij$ndvi <- (file_ij$nir - file_ij$red) / (file_ij$nir + file_ij$red)
     file_ij$baim <- 1 / ((0.05 - file_ij$nir)^2 + (0.2 - file_ij$swir1)^2)
